@@ -2,13 +2,13 @@ package com.example.demo.security.jwt;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.security.Keys;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
+import javax.crypto.SecretKey;
 import javax.servlet.FilterChain;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -21,8 +21,15 @@ public class JwtUserNamePasswordCredentialsAuthFilter extends UsernamePasswordAu
 
     private final AuthenticationManager authenticationManager;
 
-    public JwtUserNamePasswordCredentialsAuthFilter(AuthenticationManager authenticationManager) {
+    private final JwtConfig jwtConfig;
+    private final SecretKey secretKey;
+
+    public JwtUserNamePasswordCredentialsAuthFilter(AuthenticationManager authenticationManager,
+                                                    JwtConfig jwtConfig,
+                                                    SecretKey secretKey) {
         this.authenticationManager = authenticationManager;
+        this.jwtConfig = jwtConfig;
+        this.secretKey = secretKey;
     }
 
     @Override
@@ -48,20 +55,23 @@ public class JwtUserNamePasswordCredentialsAuthFilter extends UsernamePasswordAu
                                             Authentication authResult) {
 
         var twoWeeksFromNow =
-                java.sql.Date.valueOf(LocalDate.now().plusWeeks(2));
-
-        String randomGibberish =
-                "sfposnpsonişçögospngsonpngçöfşsfvcşzimv";
+                java.sql.Date.valueOf(
+                        LocalDate.now()
+                                .plusDays(
+                                jwtConfig.getTokenExpirationAfterDays()
+                                )
+                );
 
         String token = Jwts.builder()
                 .setSubject(authResult.getName())
                 .claim("authorities", authResult.getAuthorities())
                 .setIssuedAt(new Date())
                 .setExpiration(twoWeeksFromNow)
-                .signWith(Keys.hmacShaKeyFor(randomGibberish.getBytes()))
+                .signWith(secretKey)
                 .compact();
 
-        response.addHeader("Authorization", "Bearer " + token);
+        response.addHeader(jwtConfig.getAuthorizationHeader(),
+                jwtConfig.getTokenPrefix() + token);
     }
 
     private Optional<UsernamePasswordAuthRequest>

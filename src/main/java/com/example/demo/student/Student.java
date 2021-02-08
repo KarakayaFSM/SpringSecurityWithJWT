@@ -11,11 +11,11 @@ public class Student {
         this.studentName = studentName;
     }
 
-    public Integer getStudentId() {
+    public Integer getId() {
         return studentId;
     }
 
-    public String getStudentName() {
+    public String getName() {
         return studentName;
     }
 }
